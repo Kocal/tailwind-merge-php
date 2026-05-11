@@ -195,6 +195,40 @@ final class TailwindCssVersionsTest extends TestCase
     }
 
     /**
+     * @return list<list<string>>
+     */
+    public static function v43Provider(): array
+    {
+        return [
+            // Scrollbar width
+            ['scrollbar-auto scrollbar-thin scrollbar-none', 'scrollbar-none'],
+            ['scrollbar-thin scrollbar-auto', 'scrollbar-auto'],
+
+            // Zoom
+            ['zoom-100 zoom-125', 'zoom-125'],
+            ['zoom-[1.5] zoom-100', 'zoom-100'],
+
+            // Tab size
+            ['tab-4 tab-8', 'tab-8'],
+            ['tab-[4] tab-4', 'tab-4'],
+
+            // Container type
+            ['@container @container-size', '@container-size'],
+            ['@container-normal @container-size', '@container-size'],
+            ['@container-size @container', '@container'],
+
+            // Named container (same group, later wins)
+            ['@container/sidebar @container/main', '@container/main'],
+            ['@container-size/sidebar @container-size/main', '@container-size/main'],
+            ['@container-normal/sidebar @container-normal/main', '@container-normal/main'],
+
+            // Named container (last) conflicts with and overrides container-type
+            ['@container @container/sidebar', '@container/sidebar'],
+            ['@container-size @container-size/main', '@container-size/main'],
+        ];
+    }
+
+    /**
      * @param string|list<string> $input
      */
     #[DataProvider('v33Provider')]
@@ -226,6 +260,15 @@ final class TailwindCssVersionsTest extends TestCase
      */
     #[DataProvider('v42Provider')]
     public function testItHandlesV42FeaturesCorrectly(string|array $input, string $output): void
+    {
+        $this->assertSame($output, (new TailwindMerge())->merge($input));
+    }
+
+    /**
+     * @param string|list<string> $input
+     */
+    #[DataProvider('v43Provider')]
+    public function testItHandlesV43FeaturesCorrectly(string|array $input, string $output): void
     {
         $this->assertSame($output, (new TailwindMerge())->merge($input));
     }

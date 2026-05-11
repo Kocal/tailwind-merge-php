@@ -13,6 +13,7 @@ trait ValidatesArbitraryValue
 {
     /**
      * @param string|array<array-key, string> $labels
+     * @param callable(string): bool          $isLengthOnly
      */
     protected static function getIsArbitraryValue(string $value, string|array $labels, callable $isLengthOnly): bool
     {
@@ -25,7 +26,9 @@ trait ValidatesArbitraryValue
                 return \in_array($matches[1], $labels);
             }
 
-            return $isLengthOnly($matches[2] ?? null);
+            $match2 = $matches[2] ?? null;
+
+            return $isLengthOnly(\is_string($match2) ? $match2 : '');
         }
 
         return false;

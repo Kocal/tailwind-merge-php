@@ -25,9 +25,11 @@ final class ClassMapTest extends TestCase
             })->toArray();
 
         $this->assertNull($classPartObject->classGroupId);
-        $this->assertEmpty($classPartObject->validators);
+        $this->assertCount(1, $classPartObject->validators);
+        $this->assertSame('container-named', $classPartObject->validators[0]->classGroupId);
         $this->assertEquals(
             [
+                '@container' => ['container-type'],
                 'absolute' => ['position'],
                 'accent' => ['accent'],
                 'align' => ['vertical-align'],
@@ -302,6 +304,7 @@ final class ClassMapTest extends TestCase
                 'saturate' => ['saturate'],
                 'scale' => ['scale', 'scale-3d', 'scale-x', 'scale-y', 'scale-z'],
                 'scheme' => ['color-scheme'],
+                'scrollbar' => ['scrollbar-gutter', 'scrollbar-thumb-color', 'scrollbar-track-color', 'scrollbar-w'],
                 'scroll' => [
                     'scroll-behavior',
                     'scroll-m',
@@ -344,6 +347,7 @@ final class ClassMapTest extends TestCase
                 'sticky' => ['position'],
                 'stroke' => ['stroke', 'stroke-w'],
                 'subpixel' => ['font-smoothing'],
+                'tab' => ['tab-size'],
                 'table' => ['display', 'table-layout'],
                 'tabular' => ['fvn-spacing'],
                 'text' => [
@@ -372,6 +376,7 @@ final class ClassMapTest extends TestCase
                 'will' => ['will-change'],
                 'wrap' => ['wrap'],
                 'z' => ['z'],
+                'zoom' => ['zoom'],
             ],
             $classGroupsByFirstPart,
         );

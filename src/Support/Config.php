@@ -25,6 +25,7 @@ use TalesFromADev\TailwindMerge\Validators\ArbitraryVariableValidator;
 use TalesFromADev\TailwindMerge\Validators\ArbitraryVariableWeightValidator;
 use TalesFromADev\TailwindMerge\Validators\FractionValidator;
 use TalesFromADev\TailwindMerge\Validators\IntegerValidator;
+use TalesFromADev\TailwindMerge\Validators\NamedContainerQueryValidator;
 use TalesFromADev\TailwindMerge\Validators\NumberValidator;
 use TalesFromADev\TailwindMerge\Validators\PercentValidator;
 use TalesFromADev\TailwindMerge\Validators\TshirtSizeValidator;
@@ -39,6 +40,7 @@ use TalesFromADev\TailwindMerge\ValueObjects\ThemeGetter;
  *       conflictingClassGroups: array<string, list<string>>,
  *       conflictingClassGroupModifiers: array<string, list<string>>,
  *       orderSensitiveModifiers: list<string>,
+ *       postfixLookupClassGroups: list<string>,
  *   }
  */
 final class Config
@@ -66,7 +68,9 @@ final class Config
         $config ??= self::getDefaultConfig();
 
         foreach (self::$additionalConfig as $key => $additionalConfig) {
-            $config[$key] = self::mergePropertyRecursively($config, $key, $additionalConfig);
+            if (\is_array($additionalConfig) || \is_scalar($additionalConfig) || null === $additionalConfig) {
+                $config[$key] = self::mergePropertyRecursively($config, $key, $additionalConfig);
+            }
         }
 
         return $config;
@@ -159,6 +163,28 @@ final class Config
                  * @deprecated since Tailwind CSS v4.0.0
                  */
                 'container' => ['container'],
+                /*
+                 * Container Type
+                 *
+                 * @see https://tailwindcss.com/docs/container-type
+                 */
+                'container-type' => [
+                    [
+                        '@container' => [
+                            '',
+                            'normal',
+                            'size',
+                            ArbitraryVariableValidator::validate(...),
+                            ArbitraryValueValidator::validate(...),
+                        ],
+                    ],
+                ],
+                /*
+                 * Named Container
+                 *
+                 * @see https://tailwindcss.com/docs/container-type
+                 */
+                'container-named' => [NamedContainerQueryValidator::validate(...)],
                 /*
                  * Columns
                  *
@@ -1201,6 +1227,20 @@ final class Config
                  * @see https://tailwindcss.com/docs/text-indent
                  */
                 'indent' => [['indent' => self::scaleUnambiguousSpacing($themeSpacing)]],
+                /*
+                 * Tab Size
+                 *
+                 * @see https://tailwindcss.com/docs/tab-size
+                 */
+                'tab-size' => [
+                    [
+                        'tab' => [
+                            IntegerValidator::validate(...),
+                            ArbitraryVariableValidator::validate(...),
+                            ArbitraryValueValidator::validate(...),
+                        ],
+                    ],
+                ],
                 /*
                  * Vertical Alignment
                  *
@@ -2360,6 +2400,20 @@ final class Config
                  */
                 'scale-3d' => ['scale-3d'],
                 /*
+                 * Zoom
+                 *
+                 * @see https://tailwindcss.com/docs/zoom
+                 */
+                'zoom' => [
+                    [
+                        'zoom' => [
+                            IntegerValidator::validate(...),
+                            ArbitraryVariableValidator::validate(...),
+                            ArbitraryValueValidator::validate(...),
+                        ],
+                    ],
+                ],
+                /*
                  * Skew
                  *
                  * @see https://tailwindcss.com/docs/skew
@@ -2810,8 +2864,38 @@ final class Config
                  * @see https://tailwindcss.com/docs/forced-color-adjust
                  */
                 'forced-color-adjust' => [['forced-color-adjust' => ['auto', 'none']]],
+
+                // -----------------
+                // --- Scrollbar ---
+                // -----------------
+
+                /*
+                 * Scrollbar Width
+                 *
+                 * @see https://tailwindcss.com/docs/scrollbar-width
+                 */
+                'scrollbar-w' => [['scrollbar' => ['auto', 'thin', 'none']]],
+                /*
+                 * Scrollbar Thumb Color
+                 *
+                 * @see https://tailwindcss.com/docs/scrollbar-color
+                 */
+                'scrollbar-thumb-color' => [['scrollbar-thumb' => self::scaleColor($themeColor)]],
+                /*
+                 * Scrollbar Track Color
+                 *
+                 * @see https://tailwindcss.com/docs/scrollbar-color
+                 */
+                'scrollbar-track-color' => [['scrollbar-track' => self::scaleColor($themeColor)]],
+                /*
+                 * Scrollbar Gutter
+                 *
+                 * @see https://tailwindcss.com/docs/scrollbar-gutter
+                 */
+                'scrollbar-gutter' => [['scrollbar-gutter' => ['auto', 'stable', 'both']]],
             ],
             'conflictingClassGroups' => [
+                'container-named' => ['container-type'],
                 'overflow' => ['overflow-x', 'overflow-y'],
                 'overscroll' => ['overscroll-x', 'overscroll-y'],
                 'inset' => [
@@ -2954,6 +3038,7 @@ final class Config
                 'placeholder',
                 'selection',
             ],
+            'postfixLookupClassGroups' => ['container-type'],
         ];
     }
 
@@ -3476,6 +3561,12 @@ final class Config
         ];
     }
 
+    /**
+     * @param array<array-key, mixed>                            $baseConfig
+     * @param array<array-key, mixed>|bool|float|int|string|null $mergeValue
+     *
+     * @return array<array-key, mixed>|bool|float|int|string|null
+     */
     private static function mergePropertyRecursively(array $baseConfig, string $mergeKey, array|bool|float|int|string|null $mergeValue): array|bool|float|int|string|null
     {
         if (!\array_key_exists($mergeKey, $baseConfig)) {
@@ -3498,20 +3589,26 @@ final class Config
             return null;
         }
 
-        if (array_is_list($mergeValue) && \is_array($baseConfig[$mergeKey]) && array_is_list($baseConfig[$mergeKey])) {
-            return [...$baseConfig[$mergeKey], ...$mergeValue];
-        }
+        $baseValue = $baseConfig[$mergeKey];
 
-        if (!array_is_list($mergeValue)) {
-            if (null === $baseConfig[$mergeKey]) {
-                return $mergeValue;
+        if (array_is_list($mergeValue)) {
+            if (\is_array($baseValue) && array_is_list($baseValue)) {
+                return [...$baseValue, ...$mergeValue];
             }
 
-            foreach ($mergeValue as $key => $value) {
-                $baseConfig[$mergeKey][$key] = self::mergePropertyRecursively($baseConfig[$mergeKey], $key, $value);
+            return $mergeValue;
+        }
+
+        if (!\is_array($baseValue)) {
+            return $mergeValue;
+        }
+
+        foreach ($mergeValue as $key => $value) {
+            if (\is_array($value) || \is_scalar($value) || null === $value) {
+                $baseValue[$key] = self::mergePropertyRecursively($baseValue, (string) $key, $value);
             }
         }
 
-        return $baseConfig[$mergeKey];
+        return $baseValue;
     }
 }
