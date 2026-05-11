@@ -63,6 +63,11 @@ final class ClassGroupUtils
         }
 
         $currentClassPart = $classParts[$startIndex] ?? null;
+
+        if (null === $currentClassPart) {
+            return null;
+        }
+
         $nextClassPartObject = $classPartObject->nextPart[$currentClassPart] ?? null;
 
         $classGroupFromNextClassPart = null !== $nextClassPartObject
@@ -83,7 +88,7 @@ final class ClassGroupUtils
             : implode(self::CLASS_PART_SEPARATOR, \array_slice($classParts, $startIndex))
         ;
 
-        return Collection::make($classPartObject->validators)->first(static fn (ClassValidatorObject $validator) => ($validator->validator)($classRest))?->classGroupId;
+        return Collection::make($classPartObject->validators)->first(static fn (ClassValidatorObject $validator, int|string $_key): bool => (bool) ($validator->validator)($classRest))?->classGroupId;
     }
 
     /**
@@ -97,6 +102,11 @@ final class ClassGroupUtils
 
         $content = u($className)->slice(1, -1);
         $colonIndex = $content->indexOf(':');
+
+        if (null === $colonIndex) {
+            return null;
+        }
+
         $property = $content->slice(0, $colonIndex)->toString();
 
         if ('' !== $property && '0' !== $property) {

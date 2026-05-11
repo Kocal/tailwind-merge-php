@@ -25,6 +25,7 @@ final class Collection
     public function __construct(self|array $items = [])
     {
         if ($items instanceof self) {
+            /** @var array<TKey, TValue> $items */
             $items = $items->all();
         }
 
@@ -59,6 +60,7 @@ final class Collection
 
     public function join(string $glue): string
     {
+        /* @phpstan-ignore argument.type */
         return implode($glue, $this->items);
     }
 

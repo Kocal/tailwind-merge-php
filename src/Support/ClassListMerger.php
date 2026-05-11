@@ -22,6 +22,9 @@ final class ClassListMerger
 
     private SortModifiers $sortModifiers;
 
+    /** @var array<string, true> */
+    private array $postfixLookupClassGroupIds;
+
     /**
      * @param Configuration $configuration
      */
@@ -30,6 +33,7 @@ final class ClassListMerger
         $this->parser = new ClassNameParser($configuration['prefix']);
         $this->classGroupUtils = new ClassGroupUtils($configuration['theme'], $configuration['classGroups'], $configuration['conflictingClassGroups'], $configuration['conflictingClassGroupModifiers']);
         $this->sortModifiers = new SortModifiers($configuration['orderSensitiveModifiers']);
+        $this->postfixLookupClassGroupIds = array_fill_keys($configuration['postfixLookupClassGroups'], true);
     }
 
     public function merge(string $classList): string
@@ -60,28 +64,33 @@ final class ClassListMerger
             }
 
             $hasPostfixModifier = null !== $maybePostfixModifierPosition;
-            $classGroupId = $this->classGroupUtils->getClassGroupId(
-                $hasPostfixModifier
-                    ? u($baseClassName)->slice(0, $maybePostfixModifierPosition)->toString()
-                    : $baseClassName,
-            );
+
+            if ($hasPostfixModifier) {
+                $baseClassNameWithoutPostfix = u($baseClassName)->slice(0, $maybePostfixModifierPosition)->toString();
+                $classGroupId = $this->classGroupUtils->getClassGroupId($baseClassNameWithoutPostfix);
+
+                $classGroupIdWithPostfix = null;
+                if (null !== $classGroupId && isset($this->postfixLookupClassGroupIds[$classGroupId])) {
+                    $classGroupIdWithPostfix = $this->classGroupUtils->getClassGroupId($baseClassName);
+                }
+
+                if (null !== $classGroupIdWithPostfix && $classGroupIdWithPostfix !== $classGroupId) {
+                    $classGroupId = $classGroupIdWithPostfix;
+                    $hasPostfixModifier = false;
+                } elseif (null === $classGroupId) {
+                    $classGroupId = $this->classGroupUtils->getClassGroupId($baseClassName);
+                    if (null !== $classGroupId) {
+                        $hasPostfixModifier = false;
+                    }
+                }
+            } else {
+                $classGroupId = $this->classGroupUtils->getClassGroupId($baseClassName);
+            }
 
             if (!$classGroupId) {
-                if (!$hasPostfixModifier) {
-                    $result = $this->formatResult($originalClassName, $result);
+                $result = $this->formatResult($originalClassName, $result);
 
-                    continue;
-                }
-
-                $classGroupId = $this->classGroupUtils->getClassGroupId($baseClassName);
-
-                if (!$classGroupId) {
-                    $result = $this->formatResult($originalClassName, $result);
-
-                    continue;
-                }
-
-                $hasPostfixModifier = false;
+                continue;
             }
 
             $variantModifier = match (\count($modifiers)) {

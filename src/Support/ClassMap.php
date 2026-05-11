@@ -37,12 +37,14 @@ final class ClassMap
     public function processClassesRecursively(array $classGroup, ClassPartObject $classPartObject, string $classGroupId, array $theme): void
     {
         foreach ($classGroup as $classDefinition) {
+            /* @var string|array<string, list<mixed>>|(callable(): mixed)|ThemeGetter $classDefinition */
             $this->processClassDefinition($classDefinition, $classPartObject, $classGroupId, $theme);
         }
     }
 
     /**
-     * @param array<string, list<mixed>> $theme
+     * @param string|array<string, list<mixed>>|(callable(): mixed)|ThemeGetter $classDefinition
+     * @param array<string, list<mixed>>                                        $theme
      */
     public function processClassDefinition(string|array|callable|ThemeGetter $classDefinition, ClassPartObject $classPartObject, string $classGroupId, array $theme): void
     {
@@ -64,6 +66,7 @@ final class ClassMap
             return;
         }
 
+        /* @var array<string, list<mixed>> $classDefinition */
         $this->processObjectDefinition($classDefinition, $classPartObject, $classGroupId, $theme);
     }
 
@@ -77,7 +80,7 @@ final class ClassMap
     {
         $classPartObject->validators[] = new ClassValidatorObject(
             classGroupId: $classGroupId,
-            validator: $classDefinition,
+            validator: $classDefinition(...),
         );
     }
 
